@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Usage: ./run_model.sh [job_name] [python_script]
+# Defaults: job_name=runmodel, python_script=run_model.py
+
+JOB_NAME=${1:-runmodel}
+PYTHON_SCRIPT=${2:-run_model.py}
+
 #===============================================================================
 # CHECK LIST
 #===============================================================================
@@ -24,7 +30,7 @@
 #===============================================================================
 
 #SBATCH -D /users/aczd097/git/daily_llm  # Working directory
-#SBATCH --job-name runmodel # Job name 8 characters or less
+#SBATCH --job-name $JOB_NAME # Job name 8 characters or less
 #SBATCH --mail-type=ALL                 # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=daniel.sikar@city.ac.uk     # Where to send mail
 
@@ -85,7 +91,7 @@ echo "Job started at $(date)"
 echo "Array Task ID: ${SLURM_ARRAY_TASK_ID}"
 
 # Run the model inference script
-python run_model.py
+python $PYTHON_SCRIPT
 
 #===============================================================================
 # Email Job Output and Calculate Duration

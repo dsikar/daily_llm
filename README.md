@@ -18,6 +18,7 @@ This repository provides an HPC/SLURM job submission framework for running Large
 - Configured for A100 GPUs (40GB or 80GB variants)
 - Email notifications on job completion
 - Resource allocation: 4 CPUs, 30GB RAM, 72-hour time limit
+- **Parameterized execution**: `run_model.sh` accepts optional job name and Python script parameters
 
 ## Features
 
@@ -46,6 +47,21 @@ python run_model.py --pipeline-only
 
 # Run only direct model inference
 python run_model.py --direct-only
+```
+
+### SLURM Job Submission
+
+The parameterized batch script allows flexible job submission:
+
+```bash
+# Submit with default settings (job name: runmodel, script: run_model.py)
+sbatch run_model.sh
+
+# Submit with custom job name
+sbatch run_model.sh experiment1
+
+# Submit with custom job name and Python script
+sbatch run_model.sh myexp custom_model.py
 ```
 
 ## Roadmap
