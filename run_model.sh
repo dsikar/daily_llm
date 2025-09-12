@@ -1,30 +1,27 @@
 #!/bin/bash
 
-#===============================================================================
-# CHECK LIST
-#===============================================================================
+# Usage: ./run_model.sh [job_name] [python_script]
+# Defaults: job_name=runmodel, python_script=run_model.py
 
-## 1. Set the working directory
-## 2. Set the job name
-## 3. Set the email type and address
-## 4. Set the partition (gengpu or preemptgpu)
-## 5. Set the number of nodes
-## 6. Set the number of tasks per node
-## 7. Set the number of CPUs per task
-## 8. Set the expected CPU RAM needed
-## 9. Set the time limit
-## 10. Set the GPU configuration
-## 11. Set the output configuration
-## 12. Set the environment setup
-## 13. Set the main script
-## 14. Set the email job output and calculate duration
+# Check if this is being called as a submission wrapper
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]] && [[ ! -v SLURM_JOB_ID ]]; then
+    # This is the wrapper - create and submit the actual SLURM script
+    JOB_NAME=${1:-runmodel}
+    PYTHON_SCRIPT=${2:-run_model.py}
+    
+    # Create temporary SLURM script
+    TEMP_SCRIPT=$(mktemp /tmp/slurm_job_XXXXXX.sh)
+    
+    # Generate the SLURM script with substituted variables
+    cat > "$TEMP_SCRIPT" << EOF
+#!/bin/bash
 
 #===============================================================================
 # SLURM Batch Script Template with Email Notification
 #===============================================================================
 
 #SBATCH -D /users/aczd097/git/daily_llm  # Working directory
-#SBATCH --job-name runmodel # Job name 8 characters or less
+#SBATCH --job-name ${JOB_NAME} # Job name 8 characters or less
 #SBATCH --mail-type=ALL                 # Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --mail-user=daniel.sikar@city.ac.uk     # Where to send mail
 
@@ -75,37 +72,48 @@ module add gnu
 #===============================================================================
 
 # Record start time
-start=$(date +%s)
+start=\$(date +%s)
 
 # Create outputs directory if it doesn't exist
 mkdir -p outputs
 
 # Your commands here
-echo "Job started at $(date)"
-echo "Array Task ID: ${SLURM_ARRAY_TASK_ID}"
+echo "Job started at \$(date)"
+echo "Array Task ID: \${SLURM_ARRAY_TASK_ID}"
 
 # Run the model inference script
-python run_model.py
+python ${PYTHON_SCRIPT}
 
 #===============================================================================
 # Email Job Output and Calculate Duration
 #===============================================================================
 
 # Get the output file path
-output_file="outputs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.o"
+output_file="outputs/\${SLURM_JOB_NAME}_\${SLURM_JOB_ID}.o"
 
 # Wait for file to be written
 sleep 5
 
 # Send last 100 lines by email
-tail -n 100 "$output_file" | mail -s "Job ${SLURM_JOB_NAME} (${SLURM_JOB_ID}) Output" daniel.sikar@city.ac.uk
+tail -n 100 "\$output_file" | mail -s "Job \${SLURM_JOB_NAME} (\${SLURM_JOB_ID}) Output" daniel.sikar@city.ac.uk
 
 # Calculate execution time
-end=$(date +%s)
-diff=$((end-start))
-hours=$((diff / 3600))
-minutes=$(( (diff % 3600) / 60 ))
-seconds=$((diff % 60))
+end=\$(date +%s)
+diff=\$((end-start))
+hours=\$((diff / 3600))
+minutes=\$(( (diff % 3600) / 60 ))
+seconds=\$((diff % 60))
 
-echo "Job completed at $(date)"
-echo "Total execution time: $hours hours, $minutes minutes, $seconds seconds"
+echo "Job completed at \$(date)"
+echo "Total execution time: \$hours hours, \$minutes minutes, \$seconds seconds"
+EOF
+
+    # Submit the generated script
+    echo "Submitting job with name: $JOB_NAME, script: $PYTHON_SCRIPT"
+    sbatch "$TEMP_SCRIPT"
+    
+    # Clean up
+    rm "$TEMP_SCRIPT"
+    
+    exit 0
+fi
